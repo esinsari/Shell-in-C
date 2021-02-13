@@ -1,10 +1,3 @@
-/*
-  Written by: Esin Sari
-  Assignment: Shell Program
-  Date......: 2/12/2021
-
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
