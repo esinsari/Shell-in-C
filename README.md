@@ -15,9 +15,9 @@ Prints the value of the currentdir variable.
 
 Without the parameter, prints out the recently typed commands (with their arguments), in reverse order, with numbers. For instance, it can print:
  
-0: history
-1: movetodir /etc
-2: movetodir /eetc
+- 0: history
+- 1: movetodir /etc
+- 2: movetodir /eetc
 
  If “-c” is passed, it clears the list of recently typed commands. 
  
