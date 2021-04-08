@@ -1,9 +1,17 @@
+/*
+  Written by: Esin Sari
+  Assignment: Shell Program
+  Date......: 4/7/2021
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
@@ -46,6 +54,10 @@ void byebye(FILE *commands);
 void start(char *program, char *paramaters);
 void background(char *program, char *paramaters);
 void dalekPID(char *arg);
+void dwelt(char *arg);
+void maik(char *arg);
+void copy(char *fromFile, char *toFile);
+void copyabode(char *sourceDir, char *targetDir);
 
 /*Linked List implementation and Other Supporting Functions*/
 void print_reverse(Node *head);
@@ -53,6 +65,7 @@ Node *createNode(char* command, char* args);
 void insert(char* command, char* args);
 void deleteAll();
 int dirExists(const char* const path);
+int isFileExists(const char *path);
 void saveHistory(Node *head, FILE *commands);
 char* realpath(const char *path, char *resolved_path);
 
@@ -139,11 +152,49 @@ int main(int argc, char *argv[])
                 arg = strtok(NULL, DELIMS); //gets argument from terminal
 
                 dalekPID(arg); 
-            }                           
+            } 
+
+            /*HW5: New built-in commads*/
+            else if (!strcmp(token, "dwelt")) 
+            {
+                arg = strtok(NULL, DELIMS); //gets argument from terminal
+
+                dwelt(arg);
+
+            }   
+            else if (!strcmp(token, "maik")) 
+            {
+                arg = strtok(NULL, DELIMS); //gets argument from terminal
+
+                maik(arg);
+            }     
+            else if (!strcmp(token, "copy")) 
+            {
+                arg = strtok(NULL, DELIMS); //gets source file from terminal
+                 
+                if(arg != NULL) {
+                    parameters = strtok(NULL, "\n"); //gets destination file from terminal
+                    copy(arg, parameters);   
+                }        
+                else
+                    printf("copy requires destination file"); 
+ 
+            }   
+            else if (!strcmp(token, "copyabode")) 
+            {
+                arg = strtok(NULL, DELIMS); //gets source-dir 
+                if(arg != NULL) {
+                    parameters = strtok(NULL, "\n"); //gets destination file from terminal
+                    copyabode(arg, parameters);   
+                }        
+                else
+                    printf("copyabode requires target directory"); 
+ 
+            }                       
             else
                 system(token);
 
-            if (errno) perror("Command failed");
+            //if (errno) perror("Command failed");
         }
             
     }
@@ -165,7 +216,11 @@ void openShell() {
         "\n# start program [paramaters]"
         "\n# byebye"
         "\n# background program [parameters]"
-        "\n# dalek PID\n\n"
+        "\n# dalek PID"
+        "\n# dwelt file"
+        "\n# maik file"
+        "\n# copy from-file to-file"
+        "\n# copyabode source-dir target-dir\n\n"
     ); 
     return; 
 } 
@@ -271,6 +326,28 @@ void replay(char *arg, FILE *commands){
         else if(!strcmp(history_cmd, "dalek"))
             dalekPID(NULL);
 
+        else if(!strcmp(history_cmd, "dwelt"))
+            dwelt(history_arg);
+        
+        else if(!strcmp(history_cmd, "maik"))
+            maik(history_arg);
+
+        else if(!strcmp(history_cmd, "copy"))
+        {   
+            history_cmd =  strtok(temp->args, " ");
+            history_arg =  strtok(NULL, "\n");
+
+            copy(history_cmd, history_arg); 
+        }
+
+        else if(!strcmp(history_cmd, "copyabode"))
+        {   
+            history_cmd =  strtok(temp->args, " ");
+            history_arg =  strtok(NULL, "\n");
+
+            copyabode(history_cmd, history_arg); 
+        }
+        
         else 
             printf("Command failed");
     }
@@ -496,6 +573,220 @@ void dalekPID(char *arg) {
         printf("Killing unsuccessful\n");
 }
 
+/*HW5: New Built-in Commands Implementations*/
+
+// Checks if a regular file exists with that name
+void dwelt(char *arg){
+
+    int isFile = 0;
+    int isDir = 0;
+      
+    char temp[MAX_LENGTH];
+    
+    if (!arg) {
+        insert("dwelt", NULL);
+        fprintf(stderr, "cd missing argument.\n");
+    }
+    else 
+    {    
+        insert("dwelt", arg);
+       
+        getcwd(temp, sizeof(currentDir)); // gets current Directory   
+        strcpy(temp, currentDir);    
+        strcat(temp, "/");
+        strcat(temp, arg);
+
+        char *path = realpath(temp, NULL); // realpath comfirmation
+    
+        isFile = isFileExists(temp);
+        isDir = dirExists(temp);
+
+        if(isDir == 1)
+            printf("Abode is.\n");
+        else if(isFile == 1)
+             printf("Dwelt indeed.\n");
+        else    
+            printf("Dwelt not.\n");
+
+    }
+}
+
+//This command creates an empty file and writes the word “Draft” into it.
+// If the file already exists, it should print an error.
+void maik(char *arg){
+
+    char temp[MAX_LENGTH];
+    
+    if (!arg) {
+        insert("maik", NULL);
+        fprintf(stderr, "cd missing argument.\n");
+    }
+    else 
+    {     
+        insert("maik", arg); 
+
+        getcwd(temp, sizeof(currentDir)); // gets current Directory
+        strcpy(temp, currentDir);        
+        strcat(temp, "/");
+        strcat(temp, arg);
+
+        char *path = realpath(temp, NULL); // realpath comfirmation
+        
+        if(isFileExists(arg))
+            printf("File already exists.\n");
+        else {
+            FILE *newfile = fopen(temp, "w");   //file to save history
+            printf("File is created.\n");
+
+            fprintf(newfile, "Draft");
+            fclose(newfile);
+        }
+        
+    }
+
+}
+
+//Copy from-file into to-file. Print an error if the source file does not exist, 
+//if the destination file exists, or if the destination file’s directory does not exist.
+void copy(char *fromFile, char *toFile){
+   
+    char content[MAX_LENGTH];
+    char tSource[MAX_LENGTH];
+    char tDestination[MAX_LENGTH];
+
+
+    if (!fromFile || !toFile) {
+        insert("copy", NULL);
+        fprintf(stderr, "cd missing argument <either source or destination file>.\n");
+    }
+    else 
+    {    
+        getcwd(tSource, sizeof(currentDir));
+        strcpy(tSource, currentDir);       
+        strcat(tSource, "/");
+        strcat(tSource, fromFile);
+
+        char *pathSource = realpath(tSource, NULL); 
+
+        getcwd(tDestination, sizeof(currentDir));  
+        strcpy(tDestination, currentDir);   
+        strcat(tDestination, "/");
+        strcat(tDestination, toFile);
+
+        char *pathDestination = realpath(tDestination, NULL); 
+    
+        if(!isFileExists(pathSource) || isFileExists(pathDestination))
+            printf("cd missing argument <either source or destination file>.\n");
+        else{
+            FILE *source = fopen(tSource, "r");
+            FILE *destination = fopen(tDestination, "w"); //open with abbend purpose
+
+            fgets(content, MAX_LENGTH, source);
+           
+            printf("Content: %s \n",  content);
+
+            fprintf(destination, "%s", content);
+
+            fclose(source);
+            fclose(destination);
+        }
+
+        char arg_source[MAX_LENGTH];
+        char arg_dest[MAX_LENGTH];
+        strcpy(arg_source, fromFile);
+        strcpy(arg_dest, toFile);
+        strcat(arg_source, " ");
+        strcat(arg_source, arg_dest);
+        
+        insert("copy", arg_source);
+
+    }
+}
+
+//Copy the directory source-dir and all its subdirectories, as a subdirectory of target-dir.
+void copyabode(char *sourceDir, char *targetDir) {
+   
+    int control;
+    struct dirent *dir;
+    char subDir[MAX_LENGTH];
+    char tSource[MAX_LENGTH];
+    char tDestination[MAX_LENGTH];
+ 
+    if (!sourceDir || !targetDir) {
+        insert("copy", NULL);
+        fprintf(stderr, "cd missing argument <either source or destination directory>.\n");
+    }
+    else {
+        
+        getcwd(tSource, sizeof(currentDir));  
+        strcat(tSource, "/");
+        strcat(tSource, sourceDir);
+        
+        printf("Source Path: %s\n", tSource);
+
+        getcwd(tDestination, sizeof(currentDir));  
+        strcat(tDestination, "/");
+        strcat(tDestination, targetDir);
+        
+        printf("Target Path: %s\n", tDestination);
+
+        /*If target direcorty does not exist, creates new one*/
+        if(!dirExists(tDestination)) {
+            control = mkdir(tDestination, 0777);
+            if(!control)
+                printf("Target directory is created.");
+        }
+
+        char *path = realpath(tSource, NULL); // realpath comfirmation
+        
+        if(path == NULL)
+        {   
+            printf("Specified source directory does not exist\n");
+        }
+        else{
+
+            DIR *directory = opendir(tSource);
+
+            if (!directory) 
+                printf("There is no subdirectory in source\n");
+            else {
+
+                printf("All files and subdirectories of source directory.\n");
+
+                while ((dir = readdir(directory)) != NULL)
+                {     
+                    printf("%s\n", dir->d_name);
+
+                     //check if it is folder type
+                    if(strstr(dir->d_name, ".") == NULL && strstr(dir->d_name, ".txt") == NULL) {
+                      
+                        strcpy(subDir, "");
+                        getcwd(subDir, sizeof(currentDir));  
+                        strcat(subDir, "/");
+                        strcat(subDir, targetDir);
+                        strcat(subDir, "/");
+                        strcat(subDir, dir->d_name);
+                    
+                        control = mkdir(subDir, 0777);
+                    
+                        if(!control)
+                            printf("Subdirectory %s is created in target.\n", dir->d_name);
+                    }
+                }
+            }
+
+            closedir(directory);
+        }
+
+        strcpy(tSource, "");
+        strcpy(tSource, sourceDir);
+        strcat(tSource, " ");
+        strcat(tSource, targetDir);
+        
+        insert("copyabode", tSource);
+    }
+}
+
 /*Linked List implementation and Other Supporting Functions*/
 void saveHistory(Node *head, FILE *commands){
     
@@ -591,4 +882,19 @@ int dirExists(const char* const path)
     }
 
     return ( info.st_mode & S_IFDIR ) ? 1 : 0;
+}
+
+int isFileExists(const char *path)
+{
+
+    struct stat buffer;
+
+    int exist = stat(path, &buffer);
+
+    // Check for file existence
+    if(exist == 0)
+        return 1;
+
+    return 0;
+    
 }
