@@ -49,3 +49,23 @@ It is similar to the run command, but it immediately prints the PID of the progr
 # dalek PID
 
 Immediately terminate the program with the specific PID (presumably started from this command line interpreter). Use the kill() function call to send a SIGKILL signal to the program. Display success or failure. 
+
+# dwelt file
+
+If a regular file exists with that name, it should print "Dwelt indeed."
+
+If the file is a directory, it should print "Abode is." 
+
+If there is no file or directory with this name, it should print "Dwelt not."
+
+# maik file
+
+Command creates an empty file and writes the word “Draft” into it. If the file already exists, it should print an error.
+
+# copy from-file to-file
+
+Copy from-file into to-file. Print an error if the source file does not exist, if the destination file exists, or if the destination file’s directory does not exist.
+
+# copyabode source-dir target-dir
+
+Copy the directory source-dir and all its subdirectories, as a subdirectory of target-dir.
